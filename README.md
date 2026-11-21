@@ -1,4 +1,5 @@
 # TEAMPATRICKLAKE-FALL2026-SQA
 
 Team Name: TEAMPATRICKLAKE
+
 Team Member(s): Patrick Lake (prl0016)
