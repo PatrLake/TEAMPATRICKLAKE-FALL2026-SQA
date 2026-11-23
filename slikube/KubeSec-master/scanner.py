@@ -13,6 +13,10 @@ import json
 from sarif_om import *
 from jschema_to_python.to_json import to_json
 
+import builtins  # FORENSICS
+import forensics_logger  # FORENSICS
+logger = forensics_logger.get_forensics_logger(__name__)  # FORENSICS
+
 '''Global SarifLog Object definition and Rule definition for SLI-KUBE. Rule IDs are ordered by the sequence as it appears in the TOSEM paper'''
 
 sarif_log = SarifLog(version='2.1.0',schema_uri='https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json', runs =[])
@@ -70,16 +74,36 @@ def getYAMLFiles(path_to_dir):
                valid_.append(full_p_file)
     return valid_ 
 
-def isValidUserName(uName): 
+# === FORENSICS MODIFICATION START: isValidUserName ===
+# --- Original implementation ---
+# def isValidUserName(uName): 
+#     valid = True
+#     if (isinstance( uName , str)  ): 
+#         if( any(z_ in uName for z_ in constants.FORBIDDEN_USER_NAMES )   ): 
+#             valid = False   
+#         else: 
+#             valid = True    
+#     else: 
+#         valid = False   
+#     return valid
+# --- Instrumented implementation ---
+def isValidUserName(uName):
     valid = True
-    if (isinstance( uName , str)  ): 
-        if( any(z_ in uName for z_ in constants.FORBIDDEN_USER_NAMES )   ): 
-            valid = False   
-        else: 
-            valid = True    
-    else: 
-        valid = False   
+    if isinstance(uName, str):
+        if any(z_ in uName for z_ in constants.FORBIDDEN_USER_NAMES):
+            valid = False
+        else:
+            valid = True
+    else:
+        valid = False
+    logger.info(
+        "func=isValidUserName status=OK input_type=%s input=%s valid=%s",
+        type(uName).__name__,
+        forensics_logger.safe_preview(uName),
+        valid,
+    )
     return valid
+# === FORENSICS MODIFICATION END: isValidUserName ===
 
 def isValidPasswordName(pName): 
     valid = True
@@ -103,33 +127,85 @@ def isValidKey(keyName):
         valid = False                      
     return valid    
 
+# === FORENSICS MODIFICATION START: checkIfValidSecret ===
+# --- Original implementation ---
+# def checkIfValidSecret(single_config_val):
+#     flag2Ret = False 
+#     # print(type( single_config_val ), single_config_val  )
+#     if ( isinstance( single_config_val, str ) ):
+#         single_config_val = single_config_val.lower()
+#         config_val = single_config_val.strip() 
+#         if ( any(x_ in config_val for x_ in constants.INVALID_SECRET_CONFIG_VALUES ) ):
+#             flag2Ret = False 
+#         else:
+#             if(  len(config_val) > 2 )  :
+#                 flag2Ret = True 
+#     else: 
+#         flag2Ret = False 
+#     return flag2Ret
+# --- Instrumented implementation ---
 def checkIfValidSecret(single_config_val):
-    flag2Ret = False 
-    # print(type( single_config_val ), single_config_val  )
-    if ( isinstance( single_config_val, str ) ):
+    flag2Ret = False
+    val_len = len(single_config_val) if isinstance(single_config_val, str) else -1
+    if isinstance(single_config_val, str):
         single_config_val = single_config_val.lower()
-        config_val = single_config_val.strip() 
-        if ( any(x_ in config_val for x_ in constants.INVALID_SECRET_CONFIG_VALUES ) ):
-            flag2Ret = False 
+        config_val = single_config_val.strip()
+        if any(x_ in config_val for x_ in constants.INVALID_SECRET_CONFIG_VALUES):
+            flag2Ret = False
         else:
-            if(  len(config_val) > 2 )  :
-                flag2Ret = True 
-    else: 
-        flag2Ret = False 
+            if len(config_val) > 2:
+                flag2Ret = True
+    else:
+        flag2Ret = False
+    logger.info(
+        "func=checkIfValidSecret status=OK input_type=%s value_len=%d is_valid_secret=%s",
+        type(single_config_val).__name__,
+        val_len,
+        flag2Ret,
+    )
     return flag2Ret
+# === FORENSICS MODIFICATION END: checkIfValidSecret ===
 
-def scanUserName(k_ , val_lis ):
+# === FORENSICS MODIFICATION START: scanUserName ===
+# --- Original implementation ---
+# def scanUserName(k_ , val_lis ):
+#     hard_coded_unames = []
+#     if isinstance(k_, str):
+#         k_ = k_.lower()    
+#     # print('INSPECTING:', k_) 
+#     if( isValidUserName( k_ )   and any(x_ in k_ for x_ in constants.SECRET_USER_LIST )  ):
+#         # print( val_lis ) 
+#         for val_ in val_lis:
+#             if (checkIfValidSecret( val_ ) ): 
+#                 # print(val_) 
+#                 hard_coded_unames.append( val_ )
+#     return hard_coded_unames
+# --- Instrumented implementation ---
+def scanUserName(k_, val_lis):
     hard_coded_unames = []
-    if isinstance(k_, str):
-        k_ = k_.lower()    
-    # print('INSPECTING:', k_) 
-    if( isValidUserName( k_ )   and any(x_ in k_ for x_ in constants.SECRET_USER_LIST )  ):
-        # print( val_lis ) 
-        for val_ in val_lis:
-            if (checkIfValidSecret( val_ ) ): 
-                # print(val_) 
-                hard_coded_unames.append( val_ )
-    return hard_coded_unames
+    try:
+        if isinstance(k_, str):
+            k_ = k_.lower()
+        if isValidUserName(k_) and any(x_ in k_ for x_ in constants.SECRET_USER_LIST):
+            for val_ in val_lis:
+                if checkIfValidSecret(val_):
+                    hard_coded_unames.append(val_)
+        logger.info(
+            "func=scanUserName status=OK key=%s val_lis_type=%s flagged_count=%d",
+            forensics_logger.safe_preview(k_),
+            type(val_lis).__name__,
+            len(hard_coded_unames),
+        )
+        return hard_coded_unames
+    except builtins.Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "scanUserName",
+            exc,
+            f"key={forensics_logger.safe_preview(k_)} val_lis_type={type(val_lis).__name__}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: scanUserName ===
 
 def scanPasswords(k_ , val_lis ):
     hard_coded_pwds = []
@@ -228,15 +304,43 @@ def scanForOverPrivileges(script_path):
                                 run.results.append(result)
     return privi_dict_return 
 
-def getItemFromSecret( dict_sec, pos ): 
+# === FORENSICS MODIFICATION START: getItemFromSecret ===
+# --- Original implementation ---
+# def getItemFromSecret( dict_sec, pos ): 
+#     dic2ret = {}
+#     cnt     = 0 
+#     for key_name , key_tup in dict_sec.items():
+#         secret_data_list = key_tup[pos]
+#         for data_ in secret_data_list: 
+#             dic2ret[cnt] = (key_name, data_)
+#             cnt          += 1
+#     return dic2ret
+# --- Instrumented implementation ---
+def getItemFromSecret(dict_sec, pos):
     dic2ret = {}
-    cnt     = 0 
-    for key_name , key_tup in dict_sec.items():
-        secret_data_list = key_tup[pos]
-        for data_ in secret_data_list: 
-            dic2ret[cnt] = (key_name, data_)
-            cnt          += 1
-    return dic2ret
+    cnt = 0
+    try:
+        for key_name, key_tup in dict_sec.items():
+            secret_data_list = key_tup[pos]
+            for data_ in secret_data_list:
+                dic2ret[cnt] = (key_name, data_)
+                cnt += 1
+        logger.info(
+            "func=getItemFromSecret status=OK pos=%s keys_in=%d items_extracted=%d",
+            forensics_logger.safe_preview(pos),
+            len(dict_sec),
+            cnt,
+        )
+        return dic2ret
+    except builtins.Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "getItemFromSecret",
+            exc,
+            f"dict_sec_type={type(dict_sec).__name__} pos={forensics_logger.safe_preview(pos)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: getItemFromSecret ===
 
 
 def scanSingleManifest( path_to_script ):

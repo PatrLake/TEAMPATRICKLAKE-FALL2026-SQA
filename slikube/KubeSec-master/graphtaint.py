@@ -8,6 +8,9 @@ import parser
 import os 
 from itertools import combinations
 
+import forensics_logger  # FORENSICS
+logger = forensics_logger.get_forensics_logger(__name__)  # FORENSICS
+
 def getYAMLFiles(path_to_dir):
     valid_  = [] 
     for root_, dirs, files_ in os.walk( path_to_dir ):
@@ -18,12 +21,44 @@ def getYAMLFiles(path_to_dir):
                valid_.append(full_p_file)
     return valid_ 
 
-def constructHelmString(hiera_tuple): 
-    str2ret  = constants.YAML_SKIPPING_TEXT 
-    upper_key, key, _ = hiera_tuple 
-    if ( upper_key != key  ):
-        str2ret =   constants.DOT_SYMBOL +  constants.HELM_VALUE_KW + constants.DOT_SYMBOL + upper_key + constants.DOT_SYMBOL + key 
-    return str2ret 
+# === FORENSICS MODIFICATION START: constructHelmString ===
+# --- Original implementation ---
+# def constructHelmString(hiera_tuple): 
+#     str2ret  = constants.YAML_SKIPPING_TEXT 
+#     upper_key, key, _ = hiera_tuple 
+#     if ( upper_key != key  ):
+#         str2ret =   constants.DOT_SYMBOL +  constants.HELM_VALUE_KW + constants.DOT_SYMBOL + upper_key + constants.DOT_SYMBOL + key 
+#     return str2ret 
+# --- Instrumented implementation ---
+def constructHelmString(hiera_tuple):
+    try:
+        str2ret = constants.YAML_SKIPPING_TEXT
+        upper_key, key, _ = hiera_tuple
+        if upper_key != key:
+            str2ret = (
+                constants.DOT_SYMBOL
+                + constants.HELM_VALUE_KW
+                + constants.DOT_SYMBOL
+                + upper_key
+                + constants.DOT_SYMBOL
+                + key
+            )
+        logger.info(
+            "func=constructHelmString status=OK upper_key=%s key=%s result=%s",
+            forensics_logger.safe_preview(upper_key),
+            forensics_logger.safe_preview(key),
+            forensics_logger.safe_preview(str2ret),
+        )
+        return str2ret
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "constructHelmString",
+            exc,
+            f"input_type={type(hiera_tuple).__name__} input={forensics_logger.safe_preview(hiera_tuple)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: constructHelmString ===
 
 def getHelmTemplateContent( templ_dir ):
     template_content_dict = {}
@@ -51,17 +86,46 @@ def getMatchingTemplates(path2script, hierarchy_ls):
                         templ_list.append( (template_file, helm_string ) )
     return templ_list
 
-def getValidTaints(  lis_template_matches ): 
+# === FORENSICS MODIFICATION START: getValidTaints ===
+# --- Original implementation ---
+# def getValidTaints(  lis_template_matches ): 
+#     '''
+#     provides a mapping between the key where the secret occurred and the 
+#     files that re affected by teh key 
+#     '''
+#     taint_lis  = []
+#     for match in lis_template_matches:
+#         script_name, helm_string = match 
+#         inceptor = helm_string.split( constants.DOT_SYMBOL )[-1]
+#         taint_lis.append( (inceptor, script_name) )
+#     return taint_lis 
+# --- Instrumented implementation ---
+def getValidTaints(lis_template_matches):
     '''
     provides a mapping between the key where the secret occurred and the 
     files that re affected by teh key 
     '''
-    taint_lis  = []
-    for match in lis_template_matches:
-        script_name, helm_string = match 
-        inceptor = helm_string.split( constants.DOT_SYMBOL )[-1]
-        taint_lis.append( (inceptor, script_name) )
-    return taint_lis 
+    try:
+        taint_lis = []
+        for match in lis_template_matches:
+            script_name, helm_string = match
+            inceptor = helm_string.split(constants.DOT_SYMBOL)[-1]
+            taint_lis.append((inceptor, script_name))
+        logger.info(
+            "func=getValidTaints status=OK matches_in=%d taints_out=%d",
+            len(lis_template_matches),
+            len(taint_lis),
+        )
+        return taint_lis
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "getValidTaints",
+            exc,
+            f"input_type={type(lis_template_matches).__name__} input={forensics_logger.safe_preview(lis_template_matches)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: getValidTaints ===
 
 
 

@@ -15,6 +15,9 @@ import re
 import subprocess
 import os
 
+import forensics_logger  # FORENSICS
+logger = forensics_logger.get_forensics_logger(__name__)  # FORENSICS
+
 #update basepath
 base_path = r" "
 
@@ -53,26 +56,68 @@ def keyMiner(dic_, value):
 
 
 
-def getKeyRecursively(  dict_, list2hold,  depth_ = 0  ) :
+# === FORENSICS MODIFICATION START: getKeyRecursively ===
+# --- Original implementation ---
+# def getKeyRecursively(  dict_, list2hold,  depth_ = 0  ) :
+#     '''
+#     gives you ALL keys in a regular/nested dictionary 
+#     '''
+#     if  isinstance(dict_, dict) :
+#         # for key_, val_ in sorted(dict_.items(), key=lambda x: x[0]):    
+#         for key_, val_ in sorted(dict_.items(), key = lambda x: x[0] if ( isinstance(x[0], str) ) else str(x[0])  ):    
+#             if isinstance(val_, dict):
+#                 list2hold.append( (key_, depth_) )
+#                 depth_ += 1 
+#                 getKeyRecursively( val_, list2hold,  depth_ ) 
+#             elif isinstance(val_, list):
+#                 for listItem in val_:
+#                         if( isinstance( listItem, dict ) ):
+#                             list2hold.append( (key_, depth_) )
+#                             depth_ += 1 
+#                             getKeyRecursively( listItem, list2hold,  depth_ )     
+#             else: 
+#                 list2hold.append( (key_, depth_) ) 
+#     #print(list2hold)               
+# --- Instrumented implementation ---
+def getKeyRecursively(dict_, list2hold, depth_=0):
     '''
     gives you ALL keys in a regular/nested dictionary 
     '''
-    if  isinstance(dict_, dict) :
-        # for key_, val_ in sorted(dict_.items(), key=lambda x: x[0]):    
-        for key_, val_ in sorted(dict_.items(), key = lambda x: x[0] if ( isinstance(x[0], str) ) else str(x[0])  ):    
-            if isinstance(val_, dict):
-                list2hold.append( (key_, depth_) )
-                depth_ += 1 
-                getKeyRecursively( val_, list2hold,  depth_ ) 
-            elif isinstance(val_, list):
-                for listItem in val_:
-                        if( isinstance( listItem, dict ) ):
-                            list2hold.append( (key_, depth_) )
-                            depth_ += 1 
-                            getKeyRecursively( listItem, list2hold,  depth_ )     
-            else: 
-                list2hold.append( (key_, depth_) ) 
-    #print(list2hold)               
+    initial_depth = depth_
+    try:
+        if isinstance(dict_, dict):
+            for key_, val_ in sorted(
+                dict_.items(), key=lambda x: x[0] if isinstance(x[0], str) else str(x[0])
+            ):
+                if isinstance(val_, dict):
+                    list2hold.append((key_, depth_))
+                    depth_ += 1
+                    getKeyRecursively(val_, list2hold, depth_)
+                elif isinstance(val_, list):
+                    for listItem in val_:
+                        if isinstance(listItem, dict):
+                            list2hold.append((key_, depth_))
+                            depth_ += 1
+                            getKeyRecursively(listItem, list2hold, depth_)
+                else:
+                    list2hold.append((key_, depth_))
+        if initial_depth == 0 or not isinstance(initial_depth, int):
+            collected = len(list2hold) if isinstance(list2hold, list) else -1
+            logger.info(
+                "func=getKeyRecursively status=OK input_type=%s keys_collected=%d depth_arg=%s",
+                type(dict_).__name__,
+                collected,
+                forensics_logger.safe_preview(initial_depth),
+            )
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "getKeyRecursively",
+            exc,
+            f"input_type={type(dict_).__name__} list2hold_type={type(list2hold).__name__} depth={forensics_logger.safe_preview(depth_)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: getKeyRecursively ===
 
 def getValuesRecursively(  dict_   ) :
     '''
@@ -109,22 +154,59 @@ def checkIfValidK8SYaml(path2yaml):
 
 
 
-def getValsFromKey(dict_, target, list_holder  ):
+# === FORENSICS MODIFICATION START: getValsFromKey ===
+# --- Original implementation ---
+# def getValsFromKey(dict_, target, list_holder  ):
+#     '''
+#     If you give a key, then this function gets the corresponding values 
+#     Multiple values are returned if there are keys with the same name  
+#     '''    
+#     if ( isinstance( dict_, dict ) ):
+#         for key, value in dict_.items():
+#             # print( key, len(key) , target, len( target ), value  )
+#             if key == target:
+#                 list_holder.append( value )
+#             else: 
+#                 if isinstance(value, dict):
+#                     getValsFromKey(value, target, list_holder)
+#                 elif isinstance(value, list):
+#                     for ls in value:
+#                         getValsFromKey(ls, target, list_holder)
+# --- Instrumented implementation ---
+def getValsFromKey(dict_, target, list_holder):
     '''
     If you give a key, then this function gets the corresponding values 
     Multiple values are returned if there are keys with the same name  
-    '''    
-    if ( isinstance( dict_, dict ) ):
-        for key, value in dict_.items():
-            # print( key, len(key) , target, len( target ), value  )
-            if key == target:
-                list_holder.append( value )
-            else: 
-                if isinstance(value, dict):
-                    getValsFromKey(value, target, list_holder)
-                elif isinstance(value, list):
-                    for ls in value:
-                        getValsFromKey(ls, target, list_holder)
+    '''
+    matched = 0
+    try:
+        if isinstance(dict_, dict):
+            for key, value in dict_.items():
+                if key == target:
+                    list_holder.append(value)
+                    matched += 1
+                else:
+                    if isinstance(value, dict):
+                        getValsFromKey(value, target, list_holder)
+                    elif isinstance(value, list):
+                        for ls in value:
+                            getValsFromKey(ls, target, list_holder)
+        if matched > 0:
+            logger.info(
+                "func=getValsFromKey status=OK target=%s matches_added=%d total_held=%d",
+                forensics_logger.safe_preview(target),
+                matched,
+                len(list_holder) if isinstance(list_holder, list) else -1,
+            )
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "getValsFromKey",
+            exc,
+            f"target={forensics_logger.safe_preview(target)} list_holder_type={type(list_holder).__name__}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: getValsFromKey ===
 
 def checkIfValidHelm(path_script):
     val_ret = False 
@@ -229,69 +311,130 @@ the parent_path (root jsonpath), paths(additional paths) parameters are optional
 
 This function returns jsonpath for each key in the yaml file and also populates key_jsonpath_mapping dictionary"""
 
+# === FORENSICS MODIFICATION START: find_json_path_keys ===
+# --- Original implementation ---
+# def find_json_path_keys(json_file, parent_path='', paths=None):
+#     #key_jsonpath_mapping = {}
+#     # print(type(json_file))
+# 
+#     """The following regular expressions are used to remove elements to construct a VALID json path"""
+# 
+#     # app.kubernetes.io/release --> "app.kubernetes.io/release"
+#     regex_key_dot = re.compile("([^\s\.]+[.][\S]+)")
+#     # app.kubernetes.io/release --> "app*kubernetes*io*release"
+#     regex_special_character_removal = re.compile("[^A-Za-z0-9]+")
+#     #[3].metadata.name --> .metadata.name
+#     regex_remove_initial_index = re.compile("^/?(\[)([0-9])+(\])")
+#     
+#     if paths is None:
+#         paths = []   
+#     if isinstance(json_file, dict):
+#         for key, value in json_file.items():
+#         
+#             """The following condition is used if there is any key: value mapping like jinja format sych as key: {{value}}. 
+#                This is a temporary fix to handle the case"""
+#             if (isinstance(key,ruamel.yaml.comments.CommentedKeyMap) and value is None) or isinstance(key,int):
+#                 pass
+#             else:
+#                 if regex_key_dot.match(key):              
+#                     str = regex_special_character_removal.sub("*",key)
+#                     path_withindex = f"{parent_path}.{str}"
+#                     path = regex_remove_initial_index.sub('',path_withindex)
+#                     #print("NOW IN DOT, the path--->",path)
+#                     #key_jsonpath_mapping[key] =path
+#                     if key_jsonpath_mapping.get(key) is None:
+#                         key_jsonpath_mapping[key] = []
+#                         key_jsonpath_mapping[key].append(path)
+#                         #print(key_jsonpath_mapping)
+#                     else:
+#                         '''Exckude the path if it is already present in the key_jsonpath_mapping dictionary. '''
+#                         if path not in key_jsonpath_mapping[key]:
+#                             key_jsonpath_mapping[key].append(path)
+#                         # print("DOT Keys -->",key_jsonpath_mapping[key])
+#                                     
+#                     paths.append(path)
+#                     find_json_path_keys(value, parent_path=path, paths=paths)
+#                 else:
+#                     path_withindex = f"{parent_path}.{key}"
+#                     path = regex_remove_initial_index.sub('',path_withindex)
+#                     #print("NOW IN REGULAR, the path--->",path)
+#                     if key_jsonpath_mapping.get(key) is None:
+#                         key_jsonpath_mapping[key] = []
+#                         key_jsonpath_mapping[key].append(path)
+#                         #print(key_jsonpath_mapping)
+#                     else:
+#                         key_jsonpath_mapping[key] = path
+#                         #print(key_jsonpath_mapping) 
+#                     #key_jsonpath_mapping[key] =path
+#                     #print(key_jsonpath_mapping)
+#                     paths.append(path)          
+#                     find_json_path_keys(value, parent_path=path, paths=paths)
+#     elif isinstance(json_file, list):
+#         for index, value in enumerate(json_file):
+#             path_withindex = f"{parent_path}[{index}]"
+#             path = regex_remove_initial_index.sub('',path_withindex)
+#             paths.append(path)
+#             find_json_path_keys(value, parent_path=path, paths=paths)
+#     return paths 
+# --- Instrumented implementation ---
 def find_json_path_keys(json_file, parent_path='', paths=None):
-    #key_jsonpath_mapping = {}
-    # print(type(json_file))
-
     """The following regular expressions are used to remove elements to construct a VALID json path"""
-
-    # app.kubernetes.io/release --> "app.kubernetes.io/release"
     regex_key_dot = re.compile("([^\s\.]+[.][\S]+)")
-    # app.kubernetes.io/release --> "app*kubernetes*io*release"
     regex_special_character_removal = re.compile("[^A-Za-z0-9]+")
-    #[3].metadata.name --> .metadata.name
     regex_remove_initial_index = re.compile("^/?(\[)([0-9])+(\])")
-    
-    if paths is None:
-        paths = []   
-    if isinstance(json_file, dict):
-        for key, value in json_file.items():
-        
-            """The following condition is used if there is any key: value mapping like jinja format sych as key: {{value}}. 
-               This is a temporary fix to handle the case"""
-            if (isinstance(key,ruamel.yaml.comments.CommentedKeyMap) and value is None) or isinstance(key,int):
-                pass
-            else:
-                if regex_key_dot.match(key):              
-                    str = regex_special_character_removal.sub("*",key)
-                    path_withindex = f"{parent_path}.{str}"
-                    path = regex_remove_initial_index.sub('',path_withindex)
-                    #print("NOW IN DOT, the path--->",path)
-                    #key_jsonpath_mapping[key] =path
-                    if key_jsonpath_mapping.get(key) is None:
-                        key_jsonpath_mapping[key] = []
-                        key_jsonpath_mapping[key].append(path)
-                        #print(key_jsonpath_mapping)
-                    else:
-                        '''Exckude the path if it is already present in the key_jsonpath_mapping dictionary. '''
-                        if path not in key_jsonpath_mapping[key]:
-                            key_jsonpath_mapping[key].append(path)
-                        # print("DOT Keys -->",key_jsonpath_mapping[key])
-                                    
-                    paths.append(path)
-                    find_json_path_keys(value, parent_path=path, paths=paths)
+
+    try:
+        if paths is None:
+            paths = []
+        if isinstance(json_file, dict):
+            for key, value in json_file.items():
+                if (isinstance(key, ruamel.yaml.comments.CommentedKeyMap) and value is None) or isinstance(key, int):
+                    pass
                 else:
-                    path_withindex = f"{parent_path}.{key}"
-                    path = regex_remove_initial_index.sub('',path_withindex)
-                    #print("NOW IN REGULAR, the path--->",path)
-                    if key_jsonpath_mapping.get(key) is None:
-                        key_jsonpath_mapping[key] = []
-                        key_jsonpath_mapping[key].append(path)
-                        #print(key_jsonpath_mapping)
+                    if regex_key_dot.match(key):
+                        sanitized_key = regex_special_character_removal.sub("*", key)
+                        path_withindex = f"{parent_path}.{sanitized_key}"
+                        path = regex_remove_initial_index.sub('', path_withindex)
+                        if key_jsonpath_mapping.get(key) is None:
+                            key_jsonpath_mapping[key] = []
+                            key_jsonpath_mapping[key].append(path)
+                        else:
+                            if path not in key_jsonpath_mapping[key]:
+                                key_jsonpath_mapping[key].append(path)
+                        paths.append(path)
+                        find_json_path_keys(value, parent_path=path, paths=paths)
                     else:
-                        key_jsonpath_mapping[key] = path
-                        #print(key_jsonpath_mapping) 
-                    #key_jsonpath_mapping[key] =path
-                    #print(key_jsonpath_mapping)
-                    paths.append(path)          
-                    find_json_path_keys(value, parent_path=path, paths=paths)
-    elif isinstance(json_file, list):
-        for index, value in enumerate(json_file):
-            path_withindex = f"{parent_path}[{index}]"
-            path = regex_remove_initial_index.sub('',path_withindex)
-            paths.append(path)
-            find_json_path_keys(value, parent_path=path, paths=paths)
-    return paths 
+                        path_withindex = f"{parent_path}.{key}"
+                        path = regex_remove_initial_index.sub('', path_withindex)
+                        if key_jsonpath_mapping.get(key) is None:
+                            key_jsonpath_mapping[key] = []
+                            key_jsonpath_mapping[key].append(path)
+                        else:
+                            key_jsonpath_mapping[key] = path
+                        paths.append(path)
+                        find_json_path_keys(value, parent_path=path, paths=paths)
+        elif isinstance(json_file, list):
+            for index, value in enumerate(json_file):
+                path_withindex = f"{parent_path}[{index}]"
+                path = regex_remove_initial_index.sub('', path_withindex)
+                paths.append(path)
+                find_json_path_keys(value, parent_path=path, paths=paths)
+        if parent_path == '':
+            logger.info(
+                "func=find_json_path_keys status=OK input_type=%s paths_found=%d",
+                type(json_file).__name__,
+                len(paths) if isinstance(paths, list) else -1,
+            )
+        return paths
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "find_json_path_keys",
+            exc,
+            f"input_type={type(json_file).__name__} paths_type={type(paths).__name__} input={forensics_logger.safe_preview(json_file)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: find_json_path_keys ===
     
 
 """"The following function is used to update the json path in the key_jsonpath_mapping dictionary.
@@ -362,55 +505,93 @@ def show_line_for_paths(  filepath, key): #key_jsonpath_mapping is a global dict
 
 
 
-def getSingleDict4MultiDocs( lis_dic ):
-    dict2ret = {} 
-    key_lis  = []
-    counter  = 0 
-    for dic in lis_dic:
-        # print(dic)
-        # print('='*100) dic = dic[0]
-        # print("----DIC---")
-        # print(dic)
-        # print("----DIC---")
-        if( isinstance(dic, list) ): 
-            '''
-            to tackle YAMLs that are Ansible YAMLs and not K8S YAMLS
-            '''
-            dic = dic[0]
-            
-        '''
-        the algorithm is if there are keys with similar names 
-        then add a suffix to differentiate between keys for 
-        multiple docs in a single YAML 
-        '''
-        # print(dic) 
-        '''
-        to handle Nones 
-        '''
-
-        """ the algorithm doesn't check the keys with suffix for misconfigurations"""
-
-        # if (dic is not None) and isinstance(dic, dict):
-        #     keys4dic = list(dic.keys())
-        #     for k_ in keys4dic:
-        #         dict2ret[k_] = dic[k_]
-
-        if ( (dic is None) == False  ) and (isinstance(dic, dict ) ):
-            keys4dic = list(dic.keys()) 
-            for k_ in keys4dic: 
-                if k_ in key_lis:
-                    dict2ret[k_ + constants.DOT_SYMBOL + constants.YAML_DOC_KW + str(counter)] = dic[k_]
-                else:
-                    key_lis.append( k_ )
-                    dict2ret[k_] = dic[k_] 
-            counter += 1 
-            #print(dict2ret) 
-    # print("-----In Single Dict 4 multiple docs---")
-    # yaml = ruamel.yaml.YAML()
-    # yaml.dump(dict2ret, sys.stdout)
-    # print("-----")
-        
-    return dict2ret
+# === FORENSICS MODIFICATION START: getSingleDict4MultiDocs ===
+# --- Original implementation ---
+# def getSingleDict4MultiDocs( lis_dic ):
+#     dict2ret = {} 
+#     key_lis  = []
+#     counter  = 0 
+#     for dic in lis_dic:
+#         # print(dic)
+#         # print('='*100) dic = dic[0]
+#         # print("----DIC---")
+#         # print(dic)
+#         # print("----DIC---")
+#         if( isinstance(dic, list) ): 
+#             '''
+#             to tackle YAMLs that are Ansible YAMLs and not K8S YAMLS
+#             '''
+#             dic = dic[0]
+#             
+#         '''
+#         the algorithm is if there are keys with similar names 
+#         then add a suffix to differentiate between keys for 
+#         multiple docs in a single YAML 
+#         '''
+#         # print(dic) 
+#         '''
+#         to handle Nones 
+#         '''
+# 
+#         """ the algorithm doesn't check the keys with suffix for misconfigurations"""
+# 
+#         # if (dic is not None) and isinstance(dic, dict):
+#         #     keys4dic = list(dic.keys())
+#         #     for k_ in keys4dic:
+#         #         dict2ret[k_] = dic[k_]
+# 
+#         if ( (dic is None) == False  ) and (isinstance(dic, dict ) ):
+#             keys4dic = list(dic.keys()) 
+#             for k_ in keys4dic: 
+#                 if k_ in key_lis:
+#                     dict2ret[k_ + constants.DOT_SYMBOL + constants.YAML_DOC_KW + str(counter)] = dic[k_]
+#                 else:
+#                     key_lis.append( k_ )
+#                     dict2ret[k_] = dic[k_] 
+#             counter += 1 
+#             #print(dict2ret) 
+#     # print("-----In Single Dict 4 multiple docs---")
+#     # yaml = ruamel.yaml.YAML()
+#     # yaml.dump(dict2ret, sys.stdout)
+#     # print("-----")
+#         
+#     return dict2ret
+# --- Instrumented implementation ---
+def getSingleDict4MultiDocs(lis_dic):
+    dict2ret = {}
+    key_lis = []
+    counter = 0
+    suffixed_keys = 0
+    try:
+        for dic in lis_dic:
+            if isinstance(dic, list):
+                dic = dic[0]
+            if ((dic is None) == False) and isinstance(dic, dict):
+                keys4dic = list(dic.keys())
+                for k_ in keys4dic:
+                    if k_ in key_lis:
+                        dict2ret[k_ + constants.DOT_SYMBOL + constants.YAML_DOC_KW + str(counter)] = dic[k_]
+                        suffixed_keys += 1
+                    else:
+                        key_lis.append(k_)
+                        dict2ret[k_] = dic[k_]
+                counter += 1
+        logger.info(
+            "func=getSingleDict4MultiDocs status=OK docs_merged=%d total_keys=%d suffixed_duplicates=%d",
+            counter,
+            len(dict2ret),
+            suffixed_keys,
+        )
+        return dict2ret
+    except Exception as exc:
+        forensics_logger.log_exception(
+            logger,
+            "getSingleDict4MultiDocs",
+            exc,
+            f"input_type={type(lis_dic).__name__} docs_merged_so_far={counter} input={forensics_logger.safe_preview(lis_dic)}",
+        )
+        raise
+# === FORENSICS MODIFICATION END: getSingleDict4MultiDocs ===
 
 
 if __name__=='__main__':

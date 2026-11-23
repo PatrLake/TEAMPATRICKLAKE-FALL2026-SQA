@@ -1,4 +1,4 @@
-Fuzz Run Timestamp (UTC): 2026-11-23T18:29:17.421168+00:00
+Fuzz Run Timestamp (UTC): 2026-11-23T20:45:37.120831+00:00
 Seed: 20261122 | Targets: 10 | Total Runs: 2000
 Total Exceptions Captured: 761 | Unique Crash Sites: 24
 ======================================================================
@@ -17,71 +17,71 @@ Per-Target Summary:
 Unique Bugs / Crash Sites by Target:
 
 [graphtaint.constructHelmString]
-  - ValueError at graphtaint.py:23 in constructHelmString (hits=68, first_iter=2)
+  - ValueError at graphtaint.py:36 in constructHelmString (hits=68, first_iter=2)
     message: too many values to unpack (expected 3, got 4)
     sample_args: ((-311, ':V\t3\nC]J"C_B\tZHhm5S6xx]MY', -623, True),)
-  - TypeError at graphtaint.py:25 in constructHelmString (hits=46, first_iter=0)
+  - TypeError at graphtaint.py:39 in constructHelmString (hits=46, first_iter=0)
     message: can only concatenate str (not "NoneType") to str
     sample_args: ((None, 33.65440013574727, 'secret_key'),)
-  - TypeError at graphtaint.py:23 in constructHelmString (hits=34, first_iter=3)
+  - TypeError at graphtaint.py:36 in constructHelmString (hits=34, first_iter=3)
     message: cannot unpack non-iterable bool object
     sample_args: (True,)
 
 [graphtaint.getValidTaints]
-  - AttributeError at graphtaint.py:62 in getValidTaints (hits=43, first_iter=2)
+  - AttributeError at graphtaint.py:112 in getValidTaints (hits=43, first_iter=2)
     message: 'float' object has no attribute 'split'
     sample_args: ([(None, ''), ('unset', -30.315044848977266), (411, 'y 8l.%IYxb')],)
-  - ValueError at graphtaint.py:61 in getValidTaints (hits=39, first_iter=3)
+  - ValueError at graphtaint.py:111 in getValidTaints (hits=39, first_iter=3)
     message: not enough values to unpack (expected 2, got 1)
     sample_args: ('not_a_list',)
-  - TypeError at graphtaint.py:60 in getValidTaints (hits=38, first_iter=0)
+  - TypeError at graphtaint.py:110 in getValidTaints (hits=38, first_iter=0)
     message: 'NoneType' object is not iterable
     sample_args: (None,)
-  - TypeError at graphtaint.py:61 in getValidTaints (hits=22, first_iter=17)
+  - TypeError at graphtaint.py:111 in getValidTaints (hits=22, first_iter=17)
     message: cannot unpack non-iterable NoneType object
     sample_args: ([None],)
 
 [parser.find_json_path_keys]
-  - TypeError at parser.py:255 in find_json_path_keys (hits=102, first_iter=0)
+  - TypeError at parser.py:394 in find_json_path_keys (hits=102, first_iter=0)
     message: expected string or bytes-like object, got 'NoneType'
     sample_args: ({None: 65.03755775500684},)
-  - AttributeError at parser.py:286 in find_json_path_keys (hits=21, first_iter=19)
+  - AttributeError at parser.py:414 in find_json_path_keys (hits=21, first_iter=19)
     message: 'str' object has no attribute 'append'
     sample_args: ({'': -87.01430281228207}, '', 'not_a_list')
-  - AttributeError at parser.py:271 in find_json_path_keys (hits=2, first_iter=177)
+  - AttributeError at parser.py:404 in find_json_path_keys (hits=2, first_iter=177)
     message: 'str' object has no attribute 'append'
     sample_args: ({'M.\x00Tk6': None, 'spec': ' EDGWwVshXw/]Yy\tUH\nsFoTq8No]9xS'}, '', 'not_a_list')
 
 [parser.getKeyRecursively]
-  - AttributeError at parser.py:70 in getKeyRecursively (hits=9, first_iter=44)
+  - AttributeError at parser.py:99 in getKeyRecursively (hits=9, first_iter=44)
     message: 'NoneType' object has no attribute 'append'
     sample_args: ({3: [[False, -996, 'XwB]gRoV1zM9NKuF933-.\\c{Ipc2Ix9\n'], {5: None, True: -16, 'a': "83\tc85qI{}abIitx7/F'an%.2dah\\_-}", None: '\\{lpc6FZX kRZWi4[J[Jx]\\I}M'}], 'key': 'ab', None: 'PLQOsV0.3gf\x00'}, None, 0)
-  - TypeError at parser.py:65 in getKeyRecursively (hits=8, first_iter=47)
+  - TypeError at parser.py:94 in getKeyRecursively (hits=8, first_iter=47)
     message: unsupported operand type(s) for +=: 'NoneType' and 'int'
     sample_args: ({'h{Ef5Ufqg[:J{HlrY7.eg ': True, '.Values.app.secret': {'kind': [False, 60.40992884693145], 'key': [-12.394608713274224]}, None: [[None], ['[]', False, None]]}, [('.Values.app.secret', None)], None)
-  - AttributeError at parser.py:74 in getKeyRecursively (hits=7, first_iter=3)
+  - AttributeError at parser.py:103 in getKeyRecursively (hits=7, first_iter=3)
     message: 'NoneType' object has no attribute 'append'
     sample_args: ({2: None}, None, 0)
-  - AttributeError at parser.py:64 in getKeyRecursively (hits=5, first_iter=32)
+  - AttributeError at parser.py:93 in getKeyRecursively (hits=5, first_iter=32)
     message: 'NoneType' object has no attribute 'append'
     sample_args: ({'username': False, True: {'4JQoNTiHkKhR{3': 43.49811002940865, 'password': {':nAT9U\t4tgZc\t Dm[DBaT}WaE0:Ul]oS': -2.42037564312281, 4: "7U1m'\t.MFMkizFhDxsQ4QaFgYzPmoE1", True: ''}, 'admin_user': {'data': -672, 'secre
-  - TypeError at parser.py:71 in getKeyRecursively (hits=4, first_iter=31)
+  - TypeError at parser.py:100 in getKeyRecursively (hits=4, first_iter=31)
     message: unsupported operand type(s) for +=: 'NoneType' and 'int'
     sample_args: ({True: [{'key': -71.95062838026871}], None: '[]', 'a': ''}, [(None, None), (True, None)], None)
 
 [parser.getValsFromKey]
-  - AttributeError at parser.py:121 in getValsFromKey (hits=1, first_iter=129)
+  - AttributeError at parser.py:186 in getValsFromKey (hits=1, first_iter=129)
     message: 'NoneType' object has no attribute 'append'
     sample_args: ({'qZ:"8P\tu-EX-MoJ6[pDXtTJFV\tN40K%': ['.SqiRoNSG\x00n8{N\\sCjB5x', [False, -285, True, None], ['S9R80}M:Ow/mC\\tqWKRKL9', 'apiVersion', 'J'], ''], 'kind': [{None: 'wy r\nG_R_U32g\n}YUkPQyAaYV]-', 'secret_key': 'YN', 'k
 
 [parser.getSingleDict4MultiDocs]
-  - TypeError at parser.py:369 in getSingleDict4MultiDocs (hits=58, first_iter=1)
+  - TypeError at parser.py:566 in getSingleDict4MultiDocs (hits=58, first_iter=1)
     message: 'int' object is not iterable
     sample_args: (123,)
-  - TypeError at parser.py:402 in getSingleDict4MultiDocs (hits=36, first_iter=14)
+  - TypeError at parser.py:573 in getSingleDict4MultiDocs (hits=36, first_iter=14)
     message: unsupported operand type(s) for +: 'NoneType' and 'str'
     sample_args: ([{None: None}, {None: 138}],)
-  - IndexError at parser.py:379 in getSingleDict4MultiDocs (hits=11, first_iter=33)
+  - IndexError at parser.py:568 in getSingleDict4MultiDocs (hits=11, first_iter=33)
     message: list index out of range
     sample_args: ([[]],)
 
@@ -92,20 +92,20 @@ Unique Bugs / Crash Sites by Target:
   No exceptions raised.
 
 [scanner.scanUserName]
-  - TypeError at scanner.py:128 in scanUserName (hits=55, first_iter=0)
+  - TypeError at scanner.py:190 in scanUserName (hits=55, first_iter=0)
     message: 'NoneType' object is not iterable
     sample_args: ('username', None)
 
 [scanner.getItemFromSecret]
-  - TypeError at scanner.py:235 in getItemFromSecret (hits=55, first_iter=1)
+  - TypeError at scanner.py:324 in getItemFromSecret (hits=55, first_iter=1)
     message: tuple indices must be integers or slices, not NoneType
     sample_args: ({'password': (['u'], ['p'], ['k'])}, None)
-  - AttributeError at scanner.py:234 in getItemFromSecret (hits=50, first_iter=0)
+  - AttributeError at scanner.py:323 in getItemFromSecret (hits=50, first_iter=0)
     message: 'list' object has no attribute 'items'
     sample_args: ([], 0)
-  - IndexError at scanner.py:235 in getItemFromSecret (hits=36, first_iter=5)
+  - IndexError at scanner.py:324 in getItemFromSecret (hits=36, first_iter=5)
     message: tuple index out of range
     sample_args: ({'password': ()}, 0)
-  - TypeError at scanner.py:236 in getItemFromSecret (hits=11, first_iter=10)
+  - TypeError at scanner.py:325 in getItemFromSecret (hits=11, first_iter=10)
     message: 'NoneType' object is not iterable
     sample_args: ({'password': (None, None, None)}, 0)

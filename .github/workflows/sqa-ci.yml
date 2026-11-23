@@ -27,11 +27,15 @@ jobs:
         run: |
           python -m py_compile fuzz.py slikube/KubeSec-master/*.py
 
-      - name: Run fuzzing suite
-        run: python fuzz.py
+      - name: Run fuzzing and forensics suite
+        run: |
+          rm -f forensics.log
+          python fuzz.py
 
-      - name: Upload fuzzing log artifact
+      - name: Upload SQA log artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fuzz-results-log
-          path: fuzz_results.log
+          name: sqa-logs
+          path: |
+            fuzz_results.log
+            forensics.log
